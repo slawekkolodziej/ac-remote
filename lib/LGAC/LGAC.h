@@ -10,7 +10,7 @@
 
 #define mode_heating 4 //b100
 #define mode_auto 3 //b011
-#define mode_dehuidification 1 //b001
+#define mode_dehumidification 1 //b001
 #define mode_cooling 0
 #define mode_none 0
 
