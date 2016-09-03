@@ -1,26 +1,17 @@
 #include <LGAC.h>
 #include <IRremote.h>
 
-// IRsend irsend;
-// LGAC lgac;
+IRsend irsend;
+LGAC lgac;
 
 int ledPin = 3;
 
 struct ac_mode {
-  String mode;
-  String fan;
-  String temperature;
-  String state;
+  int mode;
+  int fan;
+  int temperature;
+  int state;
 };
-
-void light(int n){
-  for (int i = 0; i < n; i++) {
-    digitalWrite(ledPin, HIGH);
-    delay(100);
-    digitalWrite(ledPin, LOW);
-    delay(100);
-  }
-}
 
 ac_mode read_data(String data) {
   String buf[4];
@@ -36,10 +27,10 @@ ac_mode read_data(String data) {
   }
   buf[n] = data.substring(from);
 
-  mode.mode = buf[0];
-  mode.fan = buf[1];
-  mode.temperature = buf[2];
-  mode.state = buf[3];
+  mode.mode = buf[0].toInt();
+  mode.fan = buf[1].toInt();
+  mode.temperature = buf[2].toInt();
+  mode.state = buf[3].toInt();
 
   return mode;
 }
@@ -61,9 +52,8 @@ void loop() {
     Serial.print(mode.temperature);
     Serial.print("\nstate: ");
     Serial.print(mode.state);
-  }
-  delay(500);
 
-  // lgac.setMode(mode_cooling,fan_4,18, state_on);
-  // irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+    lgac.setMode(mode.mode, mode.fan, mode.temperature, mode.state);
+    irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+  }
 }
