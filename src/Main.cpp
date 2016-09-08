@@ -1,10 +1,8 @@
+#include <IRremoteESP8266.h>
 #include <LGAC.h>
-#include <IRremote.h>
 
-IRsend irsend;
+IRsend irsend(0);
 LGAC lgac;
-
-int ledPin = 3;
 
 struct ac_mode {
   int mode;
@@ -36,24 +34,29 @@ ac_mode read_data(String data) {
 }
 
 void setup() {
+  irsend.begin();
   Serial.begin(9600);
   //LGAC LGAC(mode_heating,fan_4,30,state_off);
   // lgac.setMode(mode_cooling,fan_4,18, state_on);
 }
 
 void loop() {
-  if (Serial.available()) {
-    ac_mode mode = read_data(Serial.readStringUntil(';'));
-    Serial.print("mode: ");
-    Serial.print(mode.mode);
-    Serial.print("\nfan: ");
-    Serial.print(mode.fan);
-    Serial.print("\ntemperature: ");
-    Serial.print(mode.temperature);
-    Serial.print("\nstate: ");
-    Serial.print(mode.state);
+  // if (Serial.available()) {
+  //   ac_mode mode = read_data(Serial.readStringUntil(';'));
+  //   Serial.print("mode: ");
+  //   Serial.print(mode.mode);
+  //   Serial.print("\nfan: ");
+  //   Serial.print(mode.fan);
+  //   Serial.print("\ntemperature: ");
+  //   Serial.print(mode.temperature);
+  //   Serial.print("\nstate: ");
+  //   Serial.print(mode.state);
+  //
+  //   lgac.setMode(mode.mode, mode.fan, mode.temperature, mode.state);
+  //   irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+  // }
 
-    lgac.setMode(mode.mode, mode.fan, mode.temperature, mode.state);
-    irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
-  }
+  lgac.setMode(0, 1, 18, 0);
+  irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+  delay(1000);
 }
