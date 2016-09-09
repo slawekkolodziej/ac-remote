@@ -1,62 +1,97 @@
 #include <IRremoteESP8266.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
 #include <LGAC.h>
 
 IRsend irsend(0);
 LGAC lgac;
 
-struct ac_mode {
-  int mode;
-  int fan;
-  int temperature;
-  int state;
-};
+const char networkName[] = "...";
+const char networkPass[] = "...";
 
-ac_mode read_data(String data) {
-  String buf[4];
-  int from = 0;
-  int n = 0;
-  int index;
-  ac_mode mode;
+MDNSResponder mdns;
+ESP8266WebServer server(80);
 
-  while ((index = data.indexOf(',', from)) > -1) {
-    buf[n] = data.substring(from, index);
-    from = index + 1;
-    n += 1;
+void connectWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(networkName, networkPass);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print("- ");
+    Serial.print(WiFi.status());
+    Serial.println();
   }
-  buf[n] = data.substring(from);
 
-  mode.mode = buf[0].toInt();
-  mode.fan = buf[1].toInt();
-  mode.temperature = buf[2].toInt();
-  mode.state = buf[3].toInt();
+  Serial.println();
+  Serial.print("Connected, IP address: ");
+  Serial.println(WiFi.localIP());
+}
 
-  return mode;
+void setupServer() {
+  static String siteData = "";
+
+  server.on("/", [](){
+    server.send(200, "text/html", "<html>Hello cruel world!</html>");
+  });
+
+  server.on("/set", HTTP_GET, [](){
+    int argValue, temp, fan, mode, state;
+    String argName;
+    char response[100];
+
+    for (uint8_t i=0; i<server.args(); i++){
+      argName = server.argName(i);
+      argValue = server.arg(i).toInt();
+
+      if (argName == "temp") {
+        temp = argValue;
+      } else if (argName == "fan") {
+        fan = argValue;
+      } else if (argName == "mode") {
+        mode = argValue;
+      } else if (argName == "state") {
+        state = argValue;
+      }
+
+      Serial.print("name: ");
+      Serial.print(argName);
+      Serial.println();
+      Serial.print("value: ");
+      Serial.print(argValue);
+      Serial.println();
+
+    }
+
+    lgac.setMode(mode, fan, temp, state);
+    irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+
+    sprintf(response, "temp: %d, fan: %d, mode: %d, state: %d", temp, fan, mode, state);
+    server.send(200, response);
+  });
+
+  server.on("/off", [](){
+    lgac.setMode(0, 1, 18, 24);
+    irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
+    server.send(200, "text/html", "<html>klima wyłączona!</html>");
+  });
+  server.begin();
 }
 
 void setup() {
+  connectWiFi();
   irsend.begin();
   Serial.begin(9600);
-  //LGAC LGAC(mode_heating,fan_4,30,state_off);
-  // lgac.setMode(mode_cooling,fan_4,18, state_on);
+
+  if (mdns.begin("esp8266", WiFi.localIP())) {
+    Serial.println("MDNS responder started");
+  }
+
+  setupServer();
 }
 
 void loop() {
-  // if (Serial.available()) {
-  //   ac_mode mode = read_data(Serial.readStringUntil(';'));
-  //   Serial.print("mode: ");
-  //   Serial.print(mode.mode);
-  //   Serial.print("\nfan: ");
-  //   Serial.print(mode.fan);
-  //   Serial.print("\ntemperature: ");
-  //   Serial.print(mode.temperature);
-  //   Serial.print("\nstate: ");
-  //   Serial.print(mode.state);
-  //
-  //   lgac.setMode(mode.mode, mode.fan, mode.temperature, mode.state);
-  //   irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
-  // }
-
-  lgac.setMode(0, 1, 18, 0);
-  irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
-  delay(1000);
+  server.handleClient();
 }
