@@ -72,11 +72,6 @@ void setupServer() {
     server.send(200, response);
   });
 
-  server.on("/off", [](){
-    lgac.setMode(0, 1, 18, 24);
-    irsend.sendRaw(lgac.codes,LGAC_buffer_size,38);
-    server.send(200, "text/html", "<html>klima wyłączona!</html>");
-  });
   server.begin();
 }
 
