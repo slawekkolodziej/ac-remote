@@ -1,3 +1,33 @@
+# AC-remote
+
+**Project moved to esp-open-rtos**
+
+## TODO
+
+- [x] Investigate current state of tls1.2 support
+- [x] Look for a way to connect esp8266 thing to the aws-iot
+
+(Both things are fixed by moving to esp-open-rtos)
+
+
+## About
+
+Small project for home automation. Main goal - a client device that accepts air condition modes on Serial port and sends them through IR.
+
+Command structure:
+
+mode,fan,temperature,state;
+
+* mode - one of the available modes: cooling / dehumidification / auto / heating
+* fan - fan speed
+* temperature
+* state - on / off
+
+It's a work in progress project
+
+
+# esp-open-rtos aws-iot readme
+
 Please follow the steps below to build and run the example on your ESP8266.
 
 1. Modify client_config.c to provide your own account-specific AWS IoT
