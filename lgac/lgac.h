@@ -1,56 +1,20 @@
 #ifndef LGAC_h
 #define LGAC_h
 
-#define lgac_buffer_size 59
+#define LGAC_BUFFER_SIZE 59
+#define FIRST_BYTE 136 //b10001000
+#define FIRST_HIGH 8271
+#define FIRST_LOW 4298
+#define ZERO_AND_ONE_HIGH 439
+#define ZERO_LOW 647
+#define ONE_LOW 1709
 
+extern void lgac_set_mode(char* mode, int fan, int temperature, char* state);
+extern int get_mode(char* modeName);
+extern int get_state(char* stateName);
+extern int get_fan_speed(int fanSpeed);
+extern int get_temperature(int temp);
+extern void fill_buffer(int pos, int bits, int value);
+extern int bit_read(int num, int pos);
 
-
-#define first_byte 136 //b10001000
-
-// #define state_on 0
-// #define state_off 24 //b11000
-// #define state_change_mode 1
-
-// #define mode_heating 4 //b100
-// #define mode_auto 3 //b011
-// #define mode_fan 2
-// #define mode_dehumidification 1 //b001
-// #define mode_cooling 0
-// #define mode_none 0
-
-// #define temperature_offset 15
-
-// #define fan_1 1
-// #define fan_2 0
-// #define fan_3 2
-// #define fan_4 4 //b100
-// #define fan_none 5 //b101
-
-#define first_high 8271
-#define first_low 4298
-#define zero_and_one_high 439
-#define zero_low 647
-#define one_low 1709
-
-
-
-// class LGAC
-// {
-//     public:
-//         // fields
-//         unsigned int codes[LGAC_buffer_size];
-//         // methods
-//         // setter
-//         LGAC();
-
-//         void setMode(int _mode, int _fan, int _temperature,int _state);
-//         // debugging
-//         void debug();
-//     private:
-//         // fields
-//         byte crc;
-//         // methods
-//         void FillBuffer(byte _pos, byte _bit, byte _value);
-// };
-
-// #endif;
+#endif

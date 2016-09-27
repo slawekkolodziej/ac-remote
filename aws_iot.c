@@ -19,6 +19,7 @@
 
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
+#include "lgac/lgac.c"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
 #define MQTT_SUB_TOPIC "esp8266/control"
@@ -265,6 +266,16 @@ static void wifi_task(void *pvParameters) {
     }
 }
 
+static void ir_task(void *pvParameters) {
+    while (1) {
+        printf("ir task start\n\r");
+        lgac_set_mode("cooling", 3, 22, "on");
+        lgac_debug(); // should return 8271,4298,439,1709,439,647,439,647,439,647,439,1709,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439
+        printf("ir task end\n\r");
+        vTaskDelay(1000 / portTICK_RATE_MS);
+    }
+}
+
 void user_init(void) {
     uart_set_baud(0, 115200);
     printf("SDK version: %s, free heap %u\n", sdk_system_get_sdk_version(),
@@ -277,4 +288,5 @@ void user_init(void) {
     xTaskCreate(&wifi_task, (int8_t *) "wifi_task", 256, NULL, 2, NULL);
     xTaskCreate(&beat_task, (int8_t *) "beat_task", 256, NULL, 2, NULL);
     xTaskCreate(&mqtt_task, (int8_t *) "mqtt_task", 2048, NULL, 2, NULL);
+    xTaskCreate(&ir_task, (int8_t *) "ir_task", 256, NULL, 2, NULL);
 }
