@@ -1,45 +1,52 @@
 #include "lgac.h"
 
-unsigned char crc;
+unsigned int crc;
 unsigned int lgac_buffer[LGAC_BUFFER_SIZE];
 
-void lgac_set_mode(char* mode, int fan, int temperature, char* state) {
+void lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
     lgac_buffer[0] = FIRST_HIGH;
     lgac_buffer[1] = FIRST_LOW;
     crc = 0;
 
-    // first bytes, probably contains more settings
-    fill_buffer(0, 8, FIRST_BYTE);
-    fill_buffer(8, 5, get_state(state));
-    // fill_buffer(20,1,0); //jet
+    int state = get_state(stateName);
+    int mode;
 
-    if (strcmp(state, "off") != 0) {
-        fill_buffer(13, 3, get_mode("none"));
-        fill_buffer(16, 4, 0); // temperature
-        fill_buffer(21, 3, get_fan_speed(-1));
+    if (strcmp(stateName, "off") == 0) {
+        mode = get_mode("none");
+        temperature = 0;
+        fan = get_fan_speed(-1);
     } else {
-        fill_buffer(13, 3, get_mode(mode));
-        fill_buffer(16,4, get_temperature(temperature));
-        fill_buffer(21, 3, get_fan_speed(fan));
+        mode = get_mode(modeName);
+        temperature = get_temperature(temperature);
+        fan = get_fan_speed(fan);
     }
 
+    printf("mode: %d, temp: %d, fan: %d, state: %d", mode, temperature, fan, state);
+
+    // first bytes, probably contains more settings
+    fill_buffer(0, 8, FIRST_BYTE);
+    fill_buffer(8, 5, state);
+    fill_buffer(13, 3, mode);
+    fill_buffer(16, 4, temperature);
+    fill_buffer(20, 1, 0); //jet
+    fill_buffer(21, 3, fan);
     fill_buffer(24, 4, crc);
 
     lgac_buffer[LGAC_BUFFER_SIZE - 1] = ZERO_AND_ONE_HIGH;
 }
 
 int get_mode(char* modeName) {
-    if (strcmp(modeName, "heating") != 0 ) {
+    if (strcmp(modeName, "heating") == 0 ) {
         return 4; //b100
-    } else if (strcmp(modeName, "auto") != 0 ) {
+    } else if (strcmp(modeName, "auto") == 0 ) {
         return 3; //b011
-    } else if (strcmp(modeName, "fan") != 0 ) {
+    } else if (strcmp(modeName, "fan") == 0 ) {
         return 2;
-    } else if (strcmp(modeName, "dehumidification") != 0 ) {
+    } else if (strcmp(modeName, "dehumidification") == 0 ) {
         return 1; //b001
-    } else if (strcmp(modeName, "cooling") != 0 ) {
+    } else if (strcmp(modeName, "cooling") == 0 ) {
         return 0;
-    } else if (strcmp(modeName, "none") != 0 ) {
+    } else if (strcmp(modeName, "none") == 0 ) {
         return 0;
     }
 
@@ -62,7 +69,7 @@ int get_mode(char* modeName) {
 }
 
 int get_state(char* stateName) {
-    if (strcmp(stateName, "on")) {
+    if (strcmp(stateName, "on") == 0) {
         return 0;
     } else if (strcmp(stateName, "off")) {
         return 24; //b11000
@@ -101,10 +108,11 @@ int get_temperature(int temp) {
 
 void fill_buffer(int pos, int bits, int value) {
     for (int i = bits; i > 0; i--) {
-        lgac_buffer[ 2 + 2 * (pos + bits - i)] = ZERO_AND_ONE_HIGH;
-        lgac_buffer[ 2 + 2 * (pos + bits - i) + 1] = (bit_read(value, i - 1) == 1 ? ONE_LOW : ZERO_LOW);
+        int bit_pos = 2 + 2 * (pos + bits - i);
+        lgac_buffer[ bit_pos ] = ZERO_AND_ONE_HIGH;
+        lgac_buffer[ bit_pos + 1] = (bit_read(value, i - 1) == 1 ? ONE_LOW : ZERO_LOW);
         if (bit_read(value, i - 1) == 1) {
-            unsigned char bitset = 0x01 << (128 + i - pos - bits - 1) % 4;
+            int bitset = 1 << (128 + i - pos - bits - 1) % 4;
             crc = crc + bitset;
         }
     }
@@ -118,6 +126,6 @@ void lgac_debug() {
     }
 }
 
-int bit_read(int num, int pos) {
+int bit_read(unsigned int num, unsigned int pos) {
     return (num & ( 1 << pos )) >> pos;
 }
