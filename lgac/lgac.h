@@ -15,6 +15,6 @@ extern int get_state(char* stateName);
 extern int get_fan_speed(int fanSpeed);
 extern int get_temperature(int temp);
 extern void fill_buffer(int pos, int bits, int value);
-extern int bit_read(int num, int pos);
+extern int bit_read(unsigned int num, unsigned int pos);
 
 #endif

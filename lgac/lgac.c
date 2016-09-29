@@ -21,8 +21,6 @@ void lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
         fan = get_fan_speed(fan);
     }
 
-    printf("mode: %d, temp: %d, fan: %d, state: %d", mode, temperature, fan, state);
-
     // first bytes, probably contains more settings
     fill_buffer(0, 8, FIRST_BYTE);
     fill_buffer(8, 5, state);
