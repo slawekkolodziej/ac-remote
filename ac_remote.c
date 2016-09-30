@@ -19,7 +19,7 @@
 
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
-#include "lgac/lgac.c"
+#include "lib/lgac/lgac.c"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
 #define MQTT_SUB_TOPIC "esp8266/control"

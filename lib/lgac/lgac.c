@@ -22,13 +22,13 @@ void lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
     }
 
     // first bytes, probably contains more settings
-    fill_buffer(0, 8, FIRST_BYTE);
-    fill_buffer(8, 5, state);
-    fill_buffer(13, 3, mode);
-    fill_buffer(16, 4, temperature);
-    fill_buffer(20, 1, 0); //jet
-    fill_buffer(21, 3, fan);
-    fill_buffer(24, 4, crc);
+    lgac_fill_buffer(0, 8, FIRST_BYTE);
+    lgac_fill_buffer(8, 5, state);
+    lgac_fill_buffer(13, 3, mode);
+    lgac_fill_buffer(16, 4, temperature);
+    lgac_fill_buffer(20, 1, 0); //jet
+    lgac_fill_buffer(21, 3, fan);
+    lgac_fill_buffer(24, 4, crc);
 
     lgac_buffer[LGAC_BUFFER_SIZE - 1] = ZERO_AND_ONE_HIGH;
 }
@@ -49,21 +49,6 @@ int get_mode(char* modeName) {
     }
 
     return 0;
-    // switch (modeName) {
-    //     case "heating":
-    //         return 4; //b100
-    //     case "auto":
-    //         return 3; //b011
-    //     case "fan":
-    //         return 2;
-    //     case "dehumidification":
-    //         return 1; //b001
-    //     case "cooling":
-    //         return 0;
-    //     default:
-    //     case "none":
-    //         return 0;
-    // }
 }
 
 int get_state(char* stateName) {
@@ -74,14 +59,6 @@ int get_state(char* stateName) {
     }
 
     return 24;
-    // switch (stateName) {
-    //     case "on":
-    //         return 0;
-    //     // case "change_mode" 1:
-    //     case "off":
-    //     default:
-    //         return 24; //b11000
-    // }
 }
 
 int get_fan_speed(int fanSpeed) {
@@ -104,12 +81,13 @@ int get_temperature(int temp) {
     return temp - 15;
 }
 
-void fill_buffer(int pos, int bits, int value) {
+void lgac_fill_buffer(int pos, int bits, int value) {
     for (int i = bits; i > 0; i--) {
+        int bit_value = bit_read(value, i - 1);
         int bit_pos = 2 + 2 * (pos + bits - i);
         lgac_buffer[ bit_pos ] = ZERO_AND_ONE_HIGH;
-        lgac_buffer[ bit_pos + 1] = (bit_read(value, i - 1) == 1 ? ONE_LOW : ZERO_LOW);
-        if (bit_read(value, i - 1) == 1) {
+        lgac_buffer[ bit_pos + 1] = (bit_value == 1 ? ONE_LOW : ZERO_LOW);
+        if (bit_value == 1) {
             int bitset = 1 << (128 + i - pos - bits - 1) % 4;
             crc = crc + bitset;
         }
