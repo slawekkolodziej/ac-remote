@@ -20,6 +20,7 @@
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
 #include "lib/lgac/lgac.c"
+// #include "lib/ir_remote/user/ir_remote.c"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
 #define MQTT_SUB_TOPIC "esp8266/control"
@@ -267,10 +268,11 @@ static void wifi_task(void *pvParameters) {
 }
 
 static void ir_task(void *pvParameters) {
+    uint16_t *code;
     while (1) {
         printf("ir task start\n\r");
-        lgac_set_mode("cooling", 3, 22, "on");
-        lgac_debug(); // should return 8271,4298,439,1709,439,647,439,647,439,647,439,1709,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439,647,439
+        code = lgac_set_mode("cooling", 3, 22, "on");
+        ir_remote_send_raw(code, LGAC_BUFFER_SIZE, 38);
         printf("ir task end\n\r");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
