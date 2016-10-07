@@ -1,9 +1,9 @@
 #include "lgac.h"
 
-unsigned int crc;
-unsigned int lgac_buffer[LGAC_BUFFER_SIZE];
+uint16_t crc;
+uint16_t lgac_buffer[LGAC_BUFFER_SIZE];
 
-void lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
+uint16_t* lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
     lgac_buffer[0] = FIRST_HIGH;
     lgac_buffer[1] = FIRST_LOW;
     crc = 0;
@@ -31,6 +31,8 @@ void lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
     lgac_fill_buffer(24, 4, crc);
 
     lgac_buffer[LGAC_BUFFER_SIZE - 1] = ZERO_AND_ONE_HIGH;
+
+    return lgac_buffer;
 }
 
 int get_mode(char* modeName) {
@@ -102,6 +104,6 @@ void lgac_debug() {
     }
 }
 
-int bit_read(unsigned int num, unsigned int pos) {
+int bit_read(uint16_t num, uint16_t pos) {
     return (num & ( 1 << pos )) >> pos;
 }

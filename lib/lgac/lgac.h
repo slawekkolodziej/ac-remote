@@ -9,13 +9,13 @@
 #define ZERO_LOW 647
 #define ONE_LOW 1709
 
-extern int bit_read(unsigned int num, unsigned int pos);
+extern int bit_read(uint16_t num, uint16_t pos);
 extern int get_fan_speed(int fanSpeed);
 extern int get_mode(char* modeName);
 extern int get_state(char* stateName);
 extern int get_temperature(int temp);
+extern uint16_t* lgac_set_mode(char* mode, int fan, int temperature, char* state);
 extern void lgac_debug();
 extern void lgac_fill_buffer(int pos, int bits, int value);
-extern void lgac_set_mode(char* mode, int fan, int temperature, char* state);
 
 #endif
