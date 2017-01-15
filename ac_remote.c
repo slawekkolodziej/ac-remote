@@ -1,11 +1,15 @@
 /*
  * Derived from examples/mqtt_client/mqtt_client.c - added TLS1.2 support and some minor modifications.
  */
+#include <stdlib.h>
+
+
 #include "espressif/esp_common.h"
 #include "esp/uart.h"
 
 #include <string.h>
 
+#include <esp8266.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
@@ -20,12 +24,15 @@
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
 #include "lib/lgac/lgac.c"
-#include "lib/ir_remote/user/ir_remote.c"
+// #include "lib/ir_remote/user/ir_remote.c"
+#include "pwm.h"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
 #define MQTT_SUB_TOPIC "esp8266/control"
-#define GPIO_LED 2
+#define GPIO_LED 0
 #define MQTT_PORT 8883
+
+#include "lib/irremote/irremote.c"
 
 /* certs, key, and endpoint */
 extern char *ca_cert, *client_endpoint, *client_cert, *client_key;
@@ -71,10 +78,10 @@ static void topic_received(mqtt_message_data_t *md) {
 
     if (!strncmp(message->payload, "on", 2)) {
         printf("Turning on LED\r\n");
-        gpio_write(GPIO_LED, 0);
+        // gpio_write(GPIO_LED, 1);
     } else if (!strncmp(message->payload, "off", 3)) {
         printf("Turning off LED\r\n");
-        gpio_write(GPIO_LED, 1);
+        // gpio_write(GPIO_LED, 0);
     }
 }
 
@@ -272,7 +279,10 @@ static void ir_task(void *pvParameters) {
     while (1) {
         printf("ir task start\n\r");
         code = lgac_set_mode("cooling", 3, 22, "on");
-        ir_remote_send_raw(code, LGAC_BUFFER_SIZE, 38);
+
+        ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
+        // pwm_init(1)
+
         printf("ir task end\n\r");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
@@ -284,7 +294,7 @@ void user_init(void) {
             xPortGetFreeHeapSize());
 
     gpio_enable(GPIO_LED, GPIO_OUTPUT);
-    gpio_write(GPIO_LED, 1);
+    gpio_write(GPIO_LED, 0);
 
     publish_queue = xQueueCreate(3, 16);
     xTaskCreate(&wifi_task, (int8_t *) "wifi_task", 256, NULL, 2, NULL);
