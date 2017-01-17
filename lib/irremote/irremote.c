@@ -1,12 +1,20 @@
 #include <esp8266.h>
 #include "irremote.h"
 
-// void enable_ir_out(uint16_t frequency) {}
+uint16_t delay;
+
+void enable_ir_out(uint16_t frequency) {
+  delay = 1000 / frequency;
+}
 
 void mark(uint16_t time) {
-  gpio_write(GPIO_LED, 1);
-  if (time > 0) {
-    sdk_os_delay_us(time);
+  uint32_t start = sdk_system_get_time();
+
+  while(sdk_system_get_time() - start < time) {
+    gpio_write(GPIO_LED, 1);
+    sdk_os_delay_us(delay);
+    gpio_write(GPIO_LED, 0);
+    sdk_os_delay_us(delay);
   }
 }
 
@@ -19,10 +27,9 @@ void space(uint16_t time) {
 }
 
 void ir_send_raw(uint16_t buf[], uint16_t len, uint16_t frequency) {
-  // set_carrier_frequence(freq_hz);
+  enable_ir_out(frequency);
 
   uint16_t i;
-
   for (i = 0; i < len; i++) {
     if (i & 1) {
       space(buf[i]);
@@ -32,6 +39,4 @@ void ir_send_raw(uint16_t buf[], uint16_t len, uint16_t frequency) {
   }
 
   space(0);
-
-  // enable_ir_out(frequency);
 }

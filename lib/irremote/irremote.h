@@ -8,5 +8,4 @@ void space(uint16_t time);
 
 void ir_send_raw(uint16_t buf[], uint16_t len, uint16_t freq_hz);
 
-
 #endif
