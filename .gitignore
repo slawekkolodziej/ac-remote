@@ -3,3 +3,4 @@ firmware
 config/*.c
 config/*.h
 .env
+.output
