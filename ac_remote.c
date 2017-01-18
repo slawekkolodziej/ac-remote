@@ -33,8 +33,6 @@
 
 #define GPIO_IR_PIN 0
 
-// #include "lib/irremote/irremote.c"
-
 /* certs, key, and endpoint */
 extern char *ca_cert, *client_endpoint, *client_cert, *client_key;
 
