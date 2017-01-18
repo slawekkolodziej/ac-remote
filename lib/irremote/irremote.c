@@ -1,42 +1,49 @@
 #include <esp8266.h>
+#include <espressif/esp_common.h>
 #include "irremote.h"
 
-uint16_t delay;
+uint8_t ir_gpio_pin;
+uint16_t frequency;
 
-void enable_ir_out(uint16_t frequency) {
-  delay = 1000 / frequency;
+void ir_set_pin(uint8_t pin) {
+  ir_gpio_pin = pin;
 }
 
-void mark(uint16_t time) {
+void ir_set_frequency(uint16_t khz) {
+  frequency = 1000 / khz;
+}
+
+void ir_mark(uint16_t time) {
   uint32_t start = sdk_system_get_time();
 
   while(sdk_system_get_time() - start < time) {
-    gpio_write(GPIO_LED, 1);
-    sdk_os_delay_us(delay);
-    gpio_write(GPIO_LED, 0);
-    sdk_os_delay_us(delay);
+    gpio_write(ir_gpio_pin, 1);
+    sdk_os_delay_us(frequency);
+    gpio_write(ir_gpio_pin, 0);
+    sdk_os_delay_us(frequency);
   }
 }
 
-void space(uint16_t time) {
-  gpio_write(GPIO_LED, 0);
+void ir_space(uint16_t time) {
+  gpio_write(ir_gpio_pin, 0);
 
   if (time > 0) {
     sdk_os_delay_us(time);
   }
 }
 
-void ir_send_raw(uint16_t buf[], uint16_t len, uint16_t frequency) {
-  enable_ir_out(frequency);
+void ir_send_raw(uint16_t buffer[], uint16_t bufferSize, uint16_t hz) {
+  ir_set_frequency(hz);
 
   uint16_t i;
-  for (i = 0; i < len; i++) {
+
+  for (i = 0; i < bufferSize; i++) {
     if (i & 1) {
-      space(buf[i]);
+      ir_space(buffer[i]);
     } else {
-      mark(buf[i]);
+      ir_mark(buffer[i]);
     }
   }
 
-  space(0);
+  ir_space(0);
 }

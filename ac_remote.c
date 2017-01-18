@@ -21,18 +21,19 @@
 #include <paho_mqtt_c/MQTTESP8266.h>
 #include <paho_mqtt_c/MQTTClient.h>
 
+#include <irremote/irremote.h>
+
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
 #include "lib/lgac/lgac.c"
-// #include "lib/ir_remote/user/ir_remote.c"
-#include "pwm.h"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
 #define MQTT_SUB_TOPIC "esp8266/control"
-#define GPIO_LED 0
 #define MQTT_PORT 8883
 
-#include "lib/irremote/irremote.c"
+#define GPIO_IR_PIN 0
+
+// #include "lib/irremote/irremote.c"
 
 /* certs, key, and endpoint */
 extern char *ca_cert, *client_endpoint, *client_cert, *client_key;
@@ -78,10 +79,10 @@ static void topic_received(mqtt_message_data_t *md) {
 
     if (!strncmp(message->payload, "on", 2)) {
         printf("Turning on LED\r\n");
-        // gpio_write(GPIO_LED, 1);
+        // gpio_write(GPIO_IR_PIN, 1);
     } else if (!strncmp(message->payload, "off", 3)) {
         printf("Turning off LED\r\n");
-        // gpio_write(GPIO_LED, 0);
+        // gpio_write(GPIO_IR_PIN, 0);
     }
 }
 
@@ -110,8 +111,7 @@ static const char *get_my_id(void) {
     return my_id;
 }
 
-static int mqtt_ssl_read(mqtt_network_t * n, unsigned char* buffer, int len,
-        int timeout_ms) {
+static int mqtt_ssl_read(mqtt_network_t * n, unsigned char* buffer, int len, int timeout_ms) {
     int r = ssl_read(ssl_conn, buffer, len, timeout_ms);
     if (r <= 0
             && (r != MBEDTLS_ERR_SSL_WANT_READ
@@ -123,8 +123,7 @@ static int mqtt_ssl_read(mqtt_network_t * n, unsigned char* buffer, int len,
     return r;
 }
 
-static int mqtt_ssl_write(mqtt_network_t* n, unsigned char* buffer, int len,
-        int timeout_ms) {
+static int mqtt_ssl_write(mqtt_network_t* n, unsigned char* buffer, int len, int timeout_ms) {
     int r = ssl_write(ssl_conn, buffer, len, timeout_ms);
     if (r <= 0
             && (r != MBEDTLS_ERR_SSL_WANT_READ
@@ -278,10 +277,9 @@ static void ir_task(void *pvParameters) {
     uint16_t *code;
     while (1) {
         printf("ir task start\n\r");
-        code = lgac_set_mode("cooling", 3, 22, "on");
+        code = lgac_set_mode("heating", 3, 25, "on");
 
         ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
-        // pwm_init(1)
 
         printf("ir task end\n\r");
         vTaskDelay(1000 / portTICK_RATE_MS);
@@ -290,11 +288,15 @@ static void ir_task(void *pvParameters) {
 
 void user_init(void) {
     uart_set_baud(0, 115200);
-    printf("SDK version: %s, free heap %u\n", sdk_system_get_sdk_version(),
-            xPortGetFreeHeapSize());
 
-    gpio_enable(GPIO_LED, GPIO_OUTPUT);
-    gpio_write(GPIO_LED, 0);
+    printf("SDK version: %s, free heap %u\n",
+        sdk_system_get_sdk_version(),
+        xPortGetFreeHeapSize());
+
+    // Initialize GPIO port for IR communication
+    gpio_enable(GPIO_IR_PIN, GPIO_OUTPUT);
+    gpio_write(GPIO_IR_PIN, 0);
+    ir_set_pin(GPIO_IR_PIN);
 
     publish_queue = xQueueCreate(3, 16);
     xTaskCreate(&wifi_task, (int8_t *) "wifi_task", 256, NULL, 2, NULL);
