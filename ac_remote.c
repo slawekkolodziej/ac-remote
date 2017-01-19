@@ -42,6 +42,10 @@ static int ssl_reset;
 static SSLConnection *ssl_conn;
 static xQueueHandle publish_queue;
 
+uint32_t message_time = 0;
+uint32_t ir_send_time = 0;
+lgac_conf* ir_conf;
+
 static void beat_task(void *pvParameters) {
     char msg[16];
     int count = 0;
@@ -65,24 +69,32 @@ static void beat_task(void *pvParameters) {
 
 static void topic_received(mqtt_message_data_t *md) {
     mqtt_message_t *message = md->message;
-    int i;
 
-    printf("Received: ");
-    for (i = 0; i < md->topic->lenstring.len; ++i)
-        printf("%c", md->topic->lenstring.data[i]);
+    int j;
+    char *str_conf[4];
 
-    printf(" = ");
-    for (i = 0; i < (int) message->payloadlen; ++i)
-        printf("%c", ((char *) (message->payload))[i]);
-    printf("\r\n");
+    printf("Received: %s\r\n", message->payload);
 
-    if (!strncmp(message->payload, "on", 2)) {
-        printf("Turning on LED\r\n");
-        // gpio_write(GPIO_IR_PIN, 1);
-    } else if (!strncmp(message->payload, "off", 3)) {
-        printf("Turning off LED\r\n");
-        // gpio_write(GPIO_IR_PIN, 0);
+    str_conf[0] = strtok(message->payload, ",");
+
+    uint8_t i = 0;
+
+    while (str_conf[i] != NULL) {
+        i += 1;
+        str_conf[i] = strtok(NULL,",");
     }
+
+    if (i == 4) {
+        message_time = sdk_system_get_time();
+        printf("updated ir_conf, %d\n\r", message_time);
+
+        ir_conf = malloc(2 * sizeof(int) + sizeof(str_conf[0]) + sizeof(str_conf[1]));
+        ir_conf->stateName = str_conf[0];
+        ir_conf->modeName = str_conf[1];
+        ir_conf->temperature = atoi(str_conf[2]);
+        ir_conf->fan = atoi(str_conf[3]);
+    }
+    printf("done :-(");
 }
 
 static const char *get_my_id(void) {
@@ -113,9 +125,9 @@ static const char *get_my_id(void) {
 static int mqtt_ssl_read(mqtt_network_t * n, unsigned char* buffer, int len, int timeout_ms) {
     int r = ssl_read(ssl_conn, buffer, len, timeout_ms);
     if (r <= 0
-            && (r != MBEDTLS_ERR_SSL_WANT_READ
-                    && r != MBEDTLS_ERR_SSL_WANT_WRITE
-                    && r != MBEDTLS_ERR_SSL_TIMEOUT)) {
+        && (r != MBEDTLS_ERR_SSL_WANT_READ
+        && r != MBEDTLS_ERR_SSL_WANT_WRITE
+        && r != MBEDTLS_ERR_SSL_TIMEOUT)) {
         printf("%s: TLS read error (%d), resetting\n\r", __func__, r);
         ssl_reset = 1;
     };
@@ -274,19 +286,17 @@ static void wifi_task(void *pvParameters) {
 
 static void ir_task(void *pvParameters) {
     uint16_t *code;
+
     while (1) {
         printf("ir task start\n\r");
-        lgac_conf conf = {
-            stateName: "on",
-            modeName: "heating",
-            temperature: 25,
-            fan: 3
-        };
-        code = lgac_set_mode(conf);
-        lgac_debug();
+        printf("%d, %d", message_time, ir_send_time);
+        if (message_time && message_time > ir_send_time) {
+            code = lgac_set_mode(ir_conf);
+            printf("irsend\n\r");
+            ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
+            ir_send_time = message_time;
 
-        ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
-
+        }
         printf("ir task end\n\r");
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
