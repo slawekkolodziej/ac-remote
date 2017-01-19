@@ -9,13 +9,20 @@
 #define ZERO_LOW 647
 #define ONE_LOW 1709
 
-extern int bit_read(uint16_t num, uint16_t pos);
-extern int get_fan_speed(int fanSpeed);
-extern int get_mode(char* modeName);
-extern int get_state(char* stateName);
-extern int get_temperature(int temp);
-extern uint16_t* lgac_set_mode(char* mode, int fan, int temperature, char* state);
-extern void lgac_debug();
-extern void lgac_fill_buffer(int pos, int bits, int value);
+typedef struct lgac_conf {
+    char* stateName;
+    char* modeName;
+    uint8_t temperature;
+    uint8_t fan;
+} lgac_conf;
+
+uint16_t* lgac_set_mode(lgac_conf* conf);
+uint16_t* lgac_fill_buffer(uint16_t pos, uint16_t bits, uint16_t value, uint16_t* crc);
+int bit_read(uint16_t num, uint16_t pos);
+int get_fan_speed(int fanSpeed);
+int get_mode(char* modeName);
+int get_state(char* stateName);
+int get_temperature(int temp);
+void lgac_debug();
 
 #endif

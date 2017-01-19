@@ -1,38 +1,52 @@
 #include "lgac.h"
 
-uint16_t crc;
 uint16_t lgac_buffer[LGAC_BUFFER_SIZE];
 
-uint16_t* lgac_set_mode(char* modeName, int fan, int temperature, char* stateName) {
+uint16_t* lgac_set_mode(lgac_conf* conf) {
     lgac_buffer[0] = FIRST_HIGH;
     lgac_buffer[1] = FIRST_LOW;
-    crc = 0;
 
-    int state = get_state(stateName);
-    int mode;
+    uint16_t crc = 0;
+    uint16_t state = get_state(conf->stateName);
+    uint16_t temperature, fan, mode;
 
-    if (strcmp(stateName, "off") == 0) {
+    if (strcmp(conf->stateName, "off") == 0) {
         mode = get_mode("none");
         temperature = 0;
         fan = get_fan_speed(-1);
     } else {
-        mode = get_mode(modeName);
-        temperature = get_temperature(temperature);
-        fan = get_fan_speed(fan);
+        mode = get_mode(conf->modeName);
+        temperature = get_temperature(conf->temperature);
+        fan = get_fan_speed(conf->fan);
     }
 
     // first bytes, probably contains more settings
-    lgac_fill_buffer(0, 8, FIRST_BYTE);
-    lgac_fill_buffer(8, 5, state);
-    lgac_fill_buffer(13, 3, mode);
-    lgac_fill_buffer(16, 4, temperature);
-    lgac_fill_buffer(20, 1, 0); //jet
-    lgac_fill_buffer(21, 3, fan);
-    lgac_fill_buffer(24, 4, crc);
+    lgac_fill_buffer(0, 8, FIRST_BYTE, &crc);
+    lgac_fill_buffer(8, 5, state, &crc);
+    lgac_fill_buffer(13, 3, mode, &crc);
+    lgac_fill_buffer(16, 4, temperature, &crc);
+    lgac_fill_buffer(20, 1, 0, &crc); //jet
+    lgac_fill_buffer(21, 3, fan, &crc);
+    lgac_fill_buffer(24, 4, crc, &crc);
 
     lgac_buffer[LGAC_BUFFER_SIZE - 1] = ZERO_AND_ONE_HIGH;
 
     return lgac_buffer;
+}
+
+uint16_t* lgac_fill_buffer(uint16_t pos, uint16_t bits, uint16_t value, uint16_t *crc) {
+    for (int i = bits; i > 0; i--) {
+        int bit_value = bit_read(value, i - 1);
+        int bit_pos = 2 + 2 * (pos + bits - i);
+        lgac_buffer[ bit_pos ] = ZERO_AND_ONE_HIGH;
+        lgac_buffer[ bit_pos + 1] = (bit_value == 1 ? ONE_LOW : ZERO_LOW);
+        if (bit_value == 1) {
+            int bitset = 1 << (128 + i - pos - bits - 1) % 4;
+            *crc = *crc + bitset;
+        }
+    }
+
+    return crc;
 }
 
 int get_mode(char* modeName) {
@@ -81,19 +95,6 @@ int get_fan_speed(int fanSpeed) {
 
 int get_temperature(int temp) {
     return temp - 15;
-}
-
-void lgac_fill_buffer(int pos, int bits, int value) {
-    for (int i = bits; i > 0; i--) {
-        int bit_value = bit_read(value, i - 1);
-        int bit_pos = 2 + 2 * (pos + bits - i);
-        lgac_buffer[ bit_pos ] = ZERO_AND_ONE_HIGH;
-        lgac_buffer[ bit_pos + 1] = (bit_value == 1 ? ONE_LOW : ZERO_LOW);
-        if (bit_value == 1) {
-            int bitset = 1 << (128 + i - pos - bits - 1) % 4;
-            crc = crc + bitset;
-        }
-    }
 }
 
 void lgac_debug() {

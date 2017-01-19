@@ -3,8 +3,8 @@
  */
 #include <stdlib.h>
 
-
-#include "espressif/esp_common.h"
+#include <espressif/esp_common.h>
+#include <esp8266.h>
 #include "esp/uart.h"
 
 #include <string.h>
@@ -25,6 +25,7 @@
 
 // this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
 #include "ssl_connection.h"
+
 #include "lib/lgac/lgac.c"
 
 #define MQTT_PUB_TOPIC "esp8266/status"
@@ -275,7 +276,14 @@ static void ir_task(void *pvParameters) {
     uint16_t *code;
     while (1) {
         printf("ir task start\n\r");
-        code = lgac_set_mode("heating", 3, 25, "on");
+        lgac_conf conf = {
+            stateName: "on",
+            modeName: "heating",
+            temperature: 25,
+            fan: 3
+        };
+        code = lgac_set_mode(conf);
+        lgac_debug();
 
         ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
 
