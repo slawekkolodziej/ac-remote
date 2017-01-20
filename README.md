@@ -4,15 +4,12 @@
 
 ## TODO
 
-- [x] Investigate current state of tls1.2 support
-- [x] Look for a way to connect esp8266 thing to the aws-iot
-
-(Both things are fixed by moving to esp-open-rtos)
-
+- [ ] Make the final decission on what framework I want to use (original espressif sdk or SuperHouse)
+- [ ] Serve configuration page on HTTP
 
 ## About
 
-Small project for home automation. Main goal - a client device that accepts air condition modes on Serial port and sends them through IR.
+Small project for home automation. Main goal: a client device that accepts air condition modes on Serial port and sends them through IR.
 
 Command structure:
 
