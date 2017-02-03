@@ -58,15 +58,12 @@ static void topic_received(mqtt_message_data_t *md) {
 
     if (i == 4) {
         message_time = sdk_system_get_time();
-        printf("updated ir_conf, %d\n\r", message_time);
-
         ir_conf = malloc(2 * sizeof(int) + sizeof(str_conf[0]) + sizeof(str_conf[1]));
         ir_conf->stateName = str_conf[0];
         ir_conf->modeName = str_conf[1];
         ir_conf->temperature = atoi(str_conf[2]);
         ir_conf->fan = atoi(str_conf[3]);
     }
-    printf("done :-(");
 }
 
 static const char *get_my_id(void) {
@@ -217,7 +214,7 @@ static void wifi_task(void *pvParameters) {
     struct sdk_station_config config = { .ssid = WIFI_SSID, .password =
             WIFI_PASS, };
 
-    printf("%s: Connecting to WiFi\n\r", __func__);
+    printf("Connecting to WiFi\n\r");
     sdk_wifi_set_opmode (STATION_MODE);
     sdk_wifi_station_set_config(&config);
 
@@ -257,19 +254,11 @@ static void wifi_task(void *pvParameters) {
 }
 
 static void ir_task(void *pvParameters) {
-    uint16_t *code;
-
     while (1) {
-        printf("ir task start\n\r");
-        printf("%d, %d", message_time, ir_send_time);
         if (message_time && message_time > ir_send_time) {
-            code = lgac_set_mode(ir_conf);
-            printf("irsend\n\r");
-            ir_send_raw(code, LGAC_BUFFER_SIZE, 38);
+            ir_send_raw(lgac_set_mode(ir_conf), LGAC_BUFFER_SIZE, 38);
             ir_send_time = message_time;
-
         }
-        printf("ir task end\n\r");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -306,7 +295,6 @@ void user_init(void) {
     publish_queue = xQueueCreate(3, 16);
 
     xTaskCreate(&wifi_task, "wifi_task", 256, NULL, 2, NULL);
-    // xTaskCreate(&beat_task, "beat_task", 256, NULL, 2, NULL);
     xTaskCreate(&httpd_task, "httpd_task", 128, NULL, 2, NULL);
     xTaskCreate(&ir_task, "ir_task", 256, NULL, 3, NULL);
     xTaskCreate(&mqtt_task, "mqtt_task", 2048, NULL, 2, NULL);
