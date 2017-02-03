@@ -1,30 +1,21 @@
-/*
- * Derived from examples/mqtt_client/mqtt_client.c - added TLS1.2 support and some minor modifications.
- */
 #include <stdlib.h>
-
-#include <espressif/esp_common.h>
 #include <esp8266.h>
-#include "esp/uart.h"
-
 #include <string.h>
-
-#include <esp8266.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
 #include <config/ssid.h>
+// this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
+#include <ssl_connection.h>
 
+#include <esp/uart.h>
+#include <espressif/esp_common.h>
 #include <espressif/esp_sta.h>
 #include <espressif/esp_wifi.h>
-
 #include <paho_mqtt_c/MQTTESP8266.h>
 #include <paho_mqtt_c/MQTTClient.h>
-
+#include <httpd/httpd.h>
 #include <irremote/irremote.h>
-
-// this must be ahead of any mbedtls header files so the local mbedtls/config.h can be properly referenced
-#include "ssl_connection.h"
 
 #include "lib/lgac/lgac.c"
 
@@ -40,40 +31,21 @@ extern char *ca_cert, *client_endpoint, *client_cert, *client_key;
 static int wifi_alive = 0;
 static int ssl_reset;
 static SSLConnection *ssl_conn;
-static xQueueHandle publish_queue;
+static QueueHandle_t publish_queue;
 
 uint32_t message_time = 0;
 uint32_t ir_send_time = 0;
 lgac_conf* ir_conf;
 
-static void beat_task(void *pvParameters) {
-    char msg[16];
-    int count = 0;
-
-    while (1) {
-        if (!wifi_alive) {
-            vTaskDelay(1000 / portTICK_RATE_MS);
-            continue;
-        }
-
-        printf("Schedule to publish\r\n");
-
-        snprintf(msg, sizeof(msg), "%d", count);
-        if (xQueueSend(publish_queue, (void *) msg, 0) == pdFALSE) {
-            printf("Publish queue overflow\r\n");
-        }
-
-        vTaskDelay(10000 / portTICK_RATE_MS);
-    }
-}
-
 static void topic_received(mqtt_message_data_t *md) {
     mqtt_message_t *message = md->message;
 
-    int j;
     char *str_conf[4];
 
-    printf("Received: %s\r\n", message->payload);
+    printf("Received: ");
+    for(int j = 0; j < (int)message->payloadlen; ++j)
+        printf("%c", ((char *)(message->payload))[j]);
+    printf("\r\n");
 
     str_conf[0] = strtok(message->payload, ",");
 
@@ -161,7 +133,7 @@ static void mqtt_task(void *pvParameters) {
     ssl_conn = (SSLConnection *) malloc(sizeof(SSLConnection));
     while (1) {
         if (!wifi_alive) {
-            vTaskDelay(1000 / portTICK_RATE_MS);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
         }
 
@@ -210,7 +182,7 @@ static void mqtt_task(void *pvParameters) {
         while (wifi_alive && !ssl_reset) {
             char msg[64];
             while (xQueueReceive(publish_queue, (void *) msg, 0) == pdTRUE) {
-                portTickType task_tick = xTaskGetTickCount();
+                TickType_t task_tick = xTaskGetTickCount();
                 uint32_t free_heap = xPortGetFreeHeapSize();
                 uint32_t free_stack = uxTaskGetStackHighWaterMark(NULL);
                 snprintf(msg, sizeof(msg), "%u: free heap %u, free stack %u",
@@ -265,7 +237,7 @@ static void wifi_task(void *pvParameters) {
                 printf("WiFi: connection failed\r\n");
                 break;
             }
-            vTaskDelay(1000 / portTICK_RATE_MS);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
             --retries;
         }
 
@@ -275,12 +247,12 @@ static void wifi_task(void *pvParameters) {
                 printf("WiFi: Connected\n\r");
                 wifi_alive = 1;
             }
-            vTaskDelay(500 / portTICK_RATE_MS);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
         }
 
         wifi_alive = 0;
         printf("WiFi: disconnected\n\r");
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -298,16 +270,33 @@ static void ir_task(void *pvParameters) {
 
         }
         printf("ir task end\n\r");
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+}
+
+char *cgi_index_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[]) {
+    return "/index.html";
+}
+
+static void httpd_task(void *pvParameters) {
+    tCGI pCGIs[] = {
+        {"/index", (tCGIHandler) cgi_index_handler},
+    };
+
+    // const char *pcConfigSSITags[] = {
+    //     "uptime", // SSI_UPTIME
+    //     "heap",   // SSI_FREE_HEAP
+    //     "led"     // SSI_LED_STATE
+    // };
+
+    http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
+    httpd_init();
+
+    while (1) {}
 }
 
 void user_init(void) {
     uart_set_baud(0, 115200);
-
-    printf("SDK version: %s, free heap %u\n",
-        sdk_system_get_sdk_version(),
-        xPortGetFreeHeapSize());
 
     // Initialize GPIO port for IR communication
     gpio_enable(GPIO_IR_PIN, GPIO_OUTPUT);
@@ -315,8 +304,10 @@ void user_init(void) {
     ir_set_pin(GPIO_IR_PIN);
 
     publish_queue = xQueueCreate(3, 16);
-    xTaskCreate(&wifi_task, (int8_t *) "wifi_task", 256, NULL, 2, NULL);
-    xTaskCreate(&beat_task, (int8_t *) "beat_task", 256, NULL, 2, NULL);
-    xTaskCreate(&mqtt_task, (int8_t *) "mqtt_task", 2048, NULL, 2, NULL);
-    xTaskCreate(&ir_task, (int8_t *) "ir_task", 256, NULL, 2, NULL);
+
+    xTaskCreate(&wifi_task, "wifi_task", 256, NULL, 2, NULL);
+    // xTaskCreate(&beat_task, "beat_task", 256, NULL, 2, NULL);
+    xTaskCreate(&httpd_task, "httpd_task", 128, NULL, 2, NULL);
+    xTaskCreate(&ir_task, "ir_task", 256, NULL, 3, NULL);
+    xTaskCreate(&mqtt_task, "mqtt_task", 2048, NULL, 2, NULL);
 }
