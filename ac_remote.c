@@ -37,19 +37,11 @@ uint32_t message_time = 0;
 uint32_t ir_send_time = 0;
 lgac_conf* ir_conf;
 
-static void topic_received(mqtt_message_data_t *md) {
-    mqtt_message_t *message = md->message;
-
+static void set_ac_mode(char* mode) {
+    uint8_t i = 0;
     char *str_conf[4];
 
-    printf("Received: ");
-    for(int j = 0; j < (int)message->payloadlen; ++j)
-        printf("%c", ((char *)(message->payload))[j]);
-    printf("\r\n");
-
-    str_conf[0] = strtok(message->payload, ",");
-
-    uint8_t i = 0;
+    str_conf[0] = strtok(mode, ",");
 
     while (str_conf[i] != NULL) {
         i += 1;
@@ -64,6 +56,17 @@ static void topic_received(mqtt_message_data_t *md) {
         ir_conf->temperature = atoi(str_conf[2]);
         ir_conf->fan = atoi(str_conf[3]);
     }
+}
+
+static void topic_received(mqtt_message_data_t *md) {
+    mqtt_message_t *message = md->message;
+
+    printf("Received: ");
+    for(int j = 0; j < (int)message->payloadlen; ++j)
+        printf("%c", ((char *)(message->payload))[j]);
+    printf("\r\n");
+
+    set_ac_mode(message->payload);
 }
 
 static const char *get_my_id(void) {
@@ -267,19 +270,22 @@ char *cgi_index_handler(int iIndex, int iNumParams, char *pcParam[], char *pcVal
     return "/index.html";
 }
 
+char *cgi_set_ac_mode_handler(int iIndex, int iNumParams, char *pcParam[], char *pcValue[]) {
+    for (int i = 0; i < iNumParams; i++) {
+        if (strcmp(pcParam[i], "ac") == 0) {
+            set_ac_mode(pcValue[i]);
+        }
+    }
+    return "/set_ac_mode.html";
+}
+
 static void httpd_task(void *pvParameters) {
     tCGI pCGIs[] = {
         {"/index", (tCGIHandler) cgi_index_handler},
+        {"/set", (tCGIHandler) cgi_set_ac_mode_handler}
     };
 
-    // const char *pcConfigSSITags[] = {
-    //     "uptime", // SSI_UPTIME
-    //     "heap",   // SSI_FREE_HEAP
-    //     "led"     // SSI_LED_STATE
-    // };
-
     http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
-    httpd_init();
 
     while (1) {}
 }
