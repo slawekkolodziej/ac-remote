@@ -282,10 +282,11 @@ char *cgi_set_ac_mode_handler(int iIndex, int iNumParams, char *pcParam[], char 
 static void httpd_task(void *pvParameters) {
     tCGI pCGIs[] = {
         {"/index", (tCGIHandler) cgi_index_handler},
-        {"/set", (tCGIHandler) cgi_set_ac_mode_handler}
+        {"/set", (tCGIHandler) cgi_set_ac_mode_handler},
     };
 
     http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
+    httpd_init();
 
     while (1) {}
 }
