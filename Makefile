@@ -1,6 +1,6 @@
 include .env
 
-PROGRAM=ac_remote
+PROGRAM=main
 PROGRAM_EXTRA_SRC_FILES= ./config/ssid.h ./config/client.c
 EXTRA_CFLAGS=-DLWIP_HTTPD_CGI=1 -DLWIP_HTTPD_SSI=1 -I./fsdata
 EXTRA_COMPONENTS = extras/paho_mqtt_c extras/mbedtls extras/httpd lib/irremote
