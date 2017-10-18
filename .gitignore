@@ -5,3 +5,7 @@ config/*.h
 .env
 .output
 fsdata/fsdata.c
+.pioenvs
+.piolibdeps
+.clang_complete
+.gcc-flags.json
